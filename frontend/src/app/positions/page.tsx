@@ -11,7 +11,7 @@ import { UnstakingModal } from '@/components/UnstakingModal';
 import { toast } from 'sonner';
 import { useAccount } from 'wagmi';
 import { useQuery } from '@tanstack/react-query';
-import { Loader2, TrendingUp, Clock, ExternalLink, Wallet, ArrowDownCircle, DollarSign } from 'lucide-react';
+import { Loader2, TrendingUp, Clock, ExternalLink, Wallet, ArrowDownCircle, DollarSign, ArrowUpDown, Calendar, Percent, Layers } from 'lucide-react';
 import { useStakingOptions } from '@/hooks/useStakingOptions';
 import { useUnstake } from '@/hooks/useUnstake';
 import { usePrices } from '@/hooks/usePrices';
@@ -59,6 +59,9 @@ export default function PositionsPage() {
   const { address, isConnected } = useAccount();
   const [selectedPosition, setSelectedPosition] = useState<Transaction | null>(null);
   const [isUnstakeModalOpen, setIsUnstakeModalOpen] = useState(false);
+  const [sortBy, setSortBy] = useState<'date' | 'apy' | 'amount' | 'protocol'>('date');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  
   const { data: options } = useStakingOptions(); // To get current APY info
   
   const { data: transactions, isLoading, error, refetch } = useQuery({
@@ -122,6 +125,48 @@ export default function PositionsPage() {
     return option ? option.apy : 0;
   };
 
+  // Sorting Logic
+  const getSortedTransactions = () => {
+    if (!transactions) return [];
+    
+    return [...transactions].sort((a, b) => {
+      let comparison = 0;
+      
+      switch (sortBy) {
+        case 'date':
+          comparison = new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
+          break;
+        case 'apy':
+          const apyA = getApyForProtocol(a.protocol, a.token);
+          const apyB = getApyForProtocol(b.protocol, b.token);
+          comparison = apyB - apyA;
+          break;
+        case 'amount':
+          const valA = parseFloat(a.amount) * (prices[a.token] || 0);
+          const valB = parseFloat(b.amount) * (prices[b.token] || 0);
+          comparison = valB - valA;
+          break;
+        case 'protocol':
+          comparison = a.protocol.localeCompare(b.protocol);
+          break;
+      }
+      
+      return sortOrder === 'asc' ? -comparison : comparison; // Default desc for date/amount/apy
+    });
+  };
+
+  const sortedTransactions = getSortedTransactions();
+
+  // Toggle sort helper
+  const toggleSort = (field: typeof sortBy) => {
+    if (sortBy === field) {
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortBy(field);
+      setSortOrder('desc');
+    }
+  };
+
   if (!isConnected) {
     return (
       <>
@@ -145,7 +190,7 @@ export default function PositionsPage() {
     <>
       <Header />
       <main className="container mx-auto px-4 py-8">
-        <div className="mb-8 flex items-end justify-between">
+        <div className="mb-8 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold text-[var(--color-text-main)]">
               My Positions
@@ -154,6 +199,48 @@ export default function PositionsPage() {
               Track your active stakes and earnings
             </p>
           </div>
+          
+          {/* Sorting Controls */}
+          {transactions && transactions.length > 0 && (
+            <div className="flex items-center gap-2 bg-white/5 p-1 rounded-lg border border-white/10">
+              <button
+                onClick={() => toggleSort('date')}
+                className={`p-2 rounded-md transition-colors ${sortBy === 'date' ? 'bg-white/10 text-[var(--color-primary)]' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-main)]'}`}
+                title="Sort by Date"
+              >
+                <Calendar className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => toggleSort('amount')}
+                className={`p-2 rounded-md transition-colors ${sortBy === 'amount' ? 'bg-white/10 text-[var(--color-primary)]' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-main)]'}`}
+                title="Sort by Value"
+              >
+                <DollarSign className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => toggleSort('apy')}
+                className={`p-2 rounded-md transition-colors ${sortBy === 'apy' ? 'bg-white/10 text-[var(--color-primary)]' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-main)]'}`}
+                title="Sort by APY"
+              >
+                <Percent className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => toggleSort('protocol')}
+                className={`p-2 rounded-md transition-colors ${sortBy === 'protocol' ? 'bg-white/10 text-[var(--color-primary)]' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-main)]'}`}
+                title="Sort by Protocol"
+              >
+                <Layers className="h-4 w-4" />
+              </button>
+              <div className="w-px h-4 bg-white/10 mx-1" />
+              <button
+                onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+                className="p-2 text-[var(--color-text-muted)] hover:text-[var(--color-text-main)]"
+                title={`Order: ${sortOrder === 'asc' ? 'Ascending' : 'Descending'}`}
+              >
+                <ArrowUpDown className={`h-4 w-4 transition-transform ${sortOrder === 'asc' ? 'rotate-180' : ''}`} />
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Portfolio Total Card */}
@@ -225,7 +312,7 @@ export default function PositionsPage() {
 
         {transactions && transactions.length > 0 && (
           <div className="grid gap-4">
-            {transactions.map((tx) => {
+            {sortedTransactions.map((tx) => {
               const currentApy = getApyForProtocol(tx.protocol, tx.token);
               
               return (
