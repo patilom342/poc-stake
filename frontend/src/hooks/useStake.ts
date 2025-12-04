@@ -170,6 +170,7 @@ export function useStake() {
         userAddress: address,
         protocol: option.protocol,
         token: option.token,
+        tokenAddress: tokenAddress, // Required by backend model
         amount,
         txHash: stakeTx,
         status: 'confirmed',
