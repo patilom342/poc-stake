@@ -51,8 +51,8 @@ const STAKING_ROUTER_ABI = [
 
 // Token addresses from env
 const TOKEN_ADDRESSES: Record<string, Address> = {
-  WETH: (process.env.NEXT_PUBLIC_SEPOLIA_WETH as Address) || '0xc94d2F24B552409Cdf00Df0E9a085225b4bbA425',
-  WBTC: (process.env.NEXT_PUBLIC_SEPOLIA_WBTC as Address) || '0xbAd8c8C58f2c7CEFDD7760DC996CbC71640A32e6',
+  WETH: (process.env.NEXT_PUBLIC_SEPOLIA_WETH as Address) || '0x918530d86c239f92E58A98CE8ed446DC042613DB',
+  WBTC: (process.env.NEXT_PUBLIC_SEPOLIA_WBTC as Address) || '0xA32ecf29Ed19102A639cd1a9706079d055f3CF2B',
   SOL: (process.env.NEXT_PUBLIC_SEPOLIA_USDC as Address) || '0xaDD1Fbe72192A8328AeD0EA6E1f729fde11Fd8Ad', // MockSOL (using USDC address)
 };
 
