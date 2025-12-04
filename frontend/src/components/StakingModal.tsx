@@ -18,6 +18,7 @@ interface StakingModalProps {
   onClose: () => void;
   onConfirm: (amount: string) => void;
   isLoading?: boolean;
+  currentStep?: 'idle' | 'approving' | 'staking' | 'success' | 'error';
 }
 
 const PROTOCOL_ICONS: Record<string, string> = {
@@ -35,7 +36,7 @@ const TOKEN_ICONS: Record<string, string> = {
   'SOL': '/icons/solana.png',
 };
 
-export function StakingModal({ option, isOpen, onClose, onConfirm, isLoading }: StakingModalProps) {
+export function StakingModal({ option, isOpen, onClose, onConfirm, isLoading, currentStep = 'idle' }: StakingModalProps) {
   const [amount, setAmount] = useState('');
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const { balance, isLoading: balanceLoading } = useTokenBalance(option?.token || '');
@@ -129,8 +130,20 @@ export function StakingModal({ option, isOpen, onClose, onConfirm, isLoading }: 
                 {isLoading ? (
                   <LoadingAnimation 
                     tokenIcon={TOKEN_ICONS[option.token] || '/icons/dedlyfi.png'}
-                    message="Processing your stake..."
-                    submessage="Please wait while we confirm your transaction on the blockchain"
+                    message={
+                      currentStep === 'approving' 
+                        ? `Approving ${option.token}...`
+                        : currentStep === 'staking'
+                        ? `Staking ${option.token}...`
+                        : 'Processing transaction...'
+                    }
+                    submessage={
+                      currentStep === 'approving'
+                        ? `You're authorizing the smart contract to access your ${option.token}. This is a one-time approval for unlimited amount (standard DeFi practice).`
+                        : currentStep === 'staking'
+                        ? `Now staking your ${option.token} on ${option.protocol}. Your tokens will be deposited and you'll receive receipt tokens representing your position.`
+                        : 'Please wait while we confirm your transaction on the blockchain'
+                    }
                   />
                 ) : (
                   /* Form */

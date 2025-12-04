@@ -173,7 +173,7 @@ export default function PositionsPage() {
                       $<CountUp 
                         end={portfolioTotal} 
                         decimals={2} 
-                        duration={1}
+                        duration={2.5}
                         separator=","
                       /> <span className="text-lg text-[var(--color-text-muted)]">USDC</span>
                     </>
@@ -306,10 +306,12 @@ export default function PositionsPage() {
                         <div className="text-lg font-bold text-[var(--color-text-main)]">
                           {prices[tx.token] ? (
                             <>
-                              ${(parseFloat(tx.amount) * prices[tx.token]).toLocaleString('en-US', { 
-                                minimumFractionDigits: 2, 
-                                maximumFractionDigits: 2 
-                              })} <span className="text-sm text-[var(--color-text-muted)]">USDC</span>
+                              $<CountUp 
+                                end={parseFloat(tx.amount) * prices[tx.token]}
+                                decimals={2}
+                                duration={1.5}
+                                separator=","
+                              /> <span className="text-sm text-[var(--color-text-muted)]">USDC</span>
                             </>
                           ) : (
                             <span className="text-[var(--color-text-muted)]">-</span>

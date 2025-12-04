@@ -182,6 +182,7 @@ export default function Home() {
         onClose={() => setSelectedOption(null)}
         onConfirm={handleConfirmStake}
         isLoading={isStaking}
+        currentStep={currentStep}
       />
     </>
   );
