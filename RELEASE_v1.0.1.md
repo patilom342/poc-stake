@@ -45,6 +45,11 @@ This release focuses on **production-ready improvements** with emphasis on user 
 ### 🔧 Technical Improvements
 
 #### Transaction Reliability
+- **Smart Allowance Check**
+  - Automatically checks existing allowance before approving
+  - Skips approval step if already sufficient (gas saver)
+  - Verifies allowance propagation before staking
+  - Prevents race conditions with RPC nodes
 - **Extended Timeouts**
   - 2-minute default timeout (up from 12 seconds)
   - 3-minute timeout on final retry attempt
