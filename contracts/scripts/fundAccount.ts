@@ -17,11 +17,11 @@ async function main() {
   console.log(`\n💰 Fondeando cuenta: ${targetAddress}`);
   console.log(`📝 Usando signer: ${signer.address}\n`);
 
-  // Tokens en Sepolia (desde .env del backend)
+  // Tokens en Sepolia (actualizados con nuevos despliegues)
   const tokens = {
-    WETH: process.env.SEPOLIA_WETH_TOKEN || "0x0fe44892c3279c09654f3590cf6CedAc3FC3ccdc",
-    WBTC: process.env.SEPOLIA_WBTC_TOKEN || "0x8762c93f84dcB6f9782602D842a587409b7Cf6cd",
-    USDC: process.env.SEPOLIA_USDC_TOKEN || "0xd28824F4515fA0FeDD052eA70369EA6175a4e18b"
+    WETH: process.env.SEPOLIA_WETH_TOKEN || "0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14",
+    WBTC: process.env.SEPOLIA_WBTC_TOKEN || "0x29f2D40B0605204364af54EC677bD022dA425d03",
+    USDC: process.env.SEPOLIA_USDC_TOKEN || "0x94a9D9AC8a22534E3FaCa9F4e7F2E2cf85d5E4C8"
   };
 
   for (const [symbol, address] of Object.entries(tokens)) {
