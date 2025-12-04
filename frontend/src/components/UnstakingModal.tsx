@@ -1,5 +1,3 @@
-'use client';
-
 import { useState, useMemo } from 'react';
 import Image from 'next/image';
 import { Card } from './ui/Card';
@@ -9,6 +7,9 @@ import { Tooltip } from './ui/Tooltip';
 import { X, AlertCircle, Wallet, ArrowDownCircle, TrendingUp, Clock, ExternalLink, Calendar, Info } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import CountUp from 'react-countup';
+import { useProtocolBalance } from '@/hooks/useProtocolBalance';
+import { formatUnits } from 'viem';
+import { useAccount } from 'wagmi';
 
 interface UnstakingModalProps {
   position: any;
@@ -36,7 +37,18 @@ const TOKEN_ICONS: Record<string, string> = {
 export function UnstakingModal({ position, isOpen, onClose, onConfirm, isLoading }: UnstakingModalProps) {
   const [amount, setAmount] = useState('');
   const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const { address } = useAccount();
   
+  const stakingRouterAddress = process.env.NEXT_PUBLIC_SEPOLIA_STAKING_ROUTER || '';
+
+  // Fetch real on-chain balance
+  const { balance: onChainBalance, isLoading: isLoadingBalance } = useProtocolBalance(
+    position?.adapterAddress,
+    position?.tokenAddress || (position?.token === 'ETH' ? '0x0000000000000000000000000000000000000000' : ''), // Need token address
+    address,
+    stakingRouterAddress
+  );
+
   // Calculate position metrics - must be before early return to follow Rules of Hooks
   const metrics = useMemo(() => {
     if (!position) {
@@ -66,15 +78,25 @@ export function UnstakingModal({ position, isOpen, onClose, onConfirm, isLoading
     const yearsElapsed = timeDiff / (1000 * 60 * 60 * 24 * 365);
     
     // Use position APY if available, otherwise fallback to default
-    // In a real app, this would come from the contract or current protocol stats
     const currentAPY = position.apy || 5.2; 
     
-    // Calculate theoretical earnings
-    const totalEarnings = stakedAmount * (currentAPY / 100) * yearsElapsed;
+    // Use on-chain balance if available, otherwise fallback to theoretical calculation
+    let currentValue = stakedAmount;
+    let totalEarnings = 0;
+
+    if (onChainBalance) {
+      // Assuming 18 decimals for now, should use token decimals
+      const formattedBalance = parseFloat(formatUnits(onChainBalance, 18));
+      currentValue = formattedBalance;
+      totalEarnings = currentValue - stakedAmount;
+    } else {
+      // Fallback to theoretical calculation
+      totalEarnings = stakedAmount * (currentAPY / 100) * yearsElapsed;
+      currentValue = stakedAmount + totalEarnings;
+    }
     
     const dailyEarnings = (stakedAmount * (currentAPY / 100)) / 365;
-    const currentValue = stakedAmount + totalEarnings;
-    const percentageGain = (totalEarnings / stakedAmount) * 100;
+    const percentageGain = stakedAmount > 0 ? (totalEarnings / stakedAmount) * 100 : 0;
     
     return {
       stakedAmount,
@@ -86,7 +108,8 @@ export function UnstakingModal({ position, isOpen, onClose, onConfirm, isLoading
       dailyEarnings,
       stakedDate,
     };
-  }, [position]);
+  }, [position, onChainBalance]);
+
 
   if (!position) return null;
 

@@ -24,4 +24,12 @@ interface IAdapter {
      * @notice Returns the name of the adapter/protocol.
      */
     function name() external view returns (string memory);
+
+    /**
+     * @notice Returns the current staked balance of a user in the protocol.
+     * @param token The token to check balance for.
+     * @param account The user address.
+     * @return balance The current balance (principal + interest).
+     */
+    function getBalance(address token, address account) external view returns (uint256 balance);
 }

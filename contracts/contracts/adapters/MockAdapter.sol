@@ -55,4 +55,10 @@ contract MockAdapter is IAdapter {
         
         return amount;
     }
+
+    function getBalance(address token, address account) external view override returns (uint256) {
+        // In a real adapter, this would call the protocol's balanceOf function
+        // e.g., aToken.balanceOf(account) for Aave
+        return receiptToken.balanceOf(account);
+    }
 }

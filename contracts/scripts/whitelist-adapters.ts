@@ -7,10 +7,10 @@ async function main() {
   console.log('Account balance:', ethers.formatEther(await ethers.provider.getBalance(deployer.address)), 'ETH');
 
   // Addresses from deployment
-  const STAKING_ROUTER_ADDRESS = '0xd965b8FA53a1b33B19079b9e998F4A928354B826';
-  const UNISWAP_ADAPTER = '0xC53d3B458D3393dA5989285905337E94fd1f9b60';
-  const AAVE_ADAPTER = '0x6b1A165252ADD50d3a833C628Edd36Eab0325f8e';
-  const LIDO_ADAPTER = '0xa3a7f23aa87a50b3F02F0d1d6950e07c4bA50DF6';
+  const STAKING_ROUTER_ADDRESS = '0x595424EB3a558d5F888A06746Fd8B5A6584ca976';
+  const UNISWAP_ADAPTER = '0xb8152050eCd324186eC1704fD0dF7853380A6aa7';
+  const AAVE_ADAPTER = '0xcee40f6aEC2b17E5b3BBB46AAdd3103C0Eb6eA46';
+  const LIDO_ADAPTER = '0x8fEB6f4aA42Aec109b5a95A2653297A01Ef1340A';
 
   const stakingRouter = await ethers.getContractAt('StakingRouter', STAKING_ROUTER_ADDRESS);
 

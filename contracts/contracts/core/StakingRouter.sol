@@ -88,6 +88,18 @@ contract StakingRouter is Ownable {
 
     event Unstaked(address indexed user, address indexed token, uint256 amount, address indexed adapter);
 
+    /**
+     * @notice Returns the current balance of a user in a specific protocol via its adapter.
+     * @param adapter The adapter address.
+     * @param token The token address.
+     * @param user The user address.
+     * @return balance The current balance.
+     */
+    function getProtocolBalance(address adapter, address token, address user) external view returns (uint256) {
+        require(supportedAdapters[adapter], "Adapter not supported");
+        return IAdapter(adapter).getBalance(token, user);
+    }
+
     // Allow receiving ETH
     receive() external payable {}
 }
