@@ -12,12 +12,7 @@ export function useUserAuth() {
       if (!address || !isConnected) return;
 
       try {
-        logger.info('Registering user: '+ address, { component: 'useUserAuth', /**
-         * name
-         */
-        public name() {
-          
-        } });
+        logger.info('Registering user: '+ address, { component: 'useUserAuth', method: 'useUserAuth' });
 
         const response = await fetch(`${API_URL}/api/users/login`, {
           method: 'POST',
@@ -34,14 +29,14 @@ export function useUserAuth() {
         const data = await response.json();
         
         if (data.isNewUser) {
-          logger.success('New user registered!', { component: 'useUserAuth', address });
+          logger.success('New user registered! '+ address, { component: 'useUserAuth', method: 'useUserAuth' });
         } else {
-          logger.info('User logged in', { component: 'useUserAuth', address });
+          logger.info('User logged in '+ address, { component: 'useUserAuth', method: 'useUserAuth' });
         }
       } catch (error: any) {
-        logger.error('Failed to register user', { 
+        logger.error('Failed to register user error: '+ error.message, { 
           component: 'useUserAuth', 
-          error: error.message 
+          method: 'useUserAuth' 
         });
       }
     };
