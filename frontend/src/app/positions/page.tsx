@@ -1,0 +1,294 @@
+'use client';
+
+import { useState } from 'react';
+import Image from 'next/image';
+import { motion } from 'framer-motion';
+import { Header } from '@/components/Header';
+import { Card } from '@/components/ui/Card';
+import { Badge } from '@/components/ui/Badge';
+import { Button } from '@/components/ui/Button';
+import { UnstakingModal } from '@/components/UnstakingModal';
+import { toast } from 'sonner';
+import { useAccount } from 'wagmi';
+import { useQuery } from '@tanstack/react-query';
+import { Loader2, TrendingUp, Clock, ExternalLink, Wallet, ArrowDownCircle } from 'lucide-react';
+import { useStakingOptions } from '@/hooks/useStakingOptions';
+import { useUnstake } from '@/hooks/useUnstake';
+import CountUp from 'react-countup';
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+
+interface Transaction {
+  _id: string;
+  userAddress: string;
+  protocol: string;
+  token: string;
+  amount: string;
+  txHash: string;
+  status: 'pending' | 'confirmed' | 'failed';
+  createdAt: string;
+  apy?: number;
+}
+
+const PROTOCOL_ICONS: Record<string, string> = {
+  'Uniswap V3': '/icons/uniswap.png',
+  'Aave V3': '/icons/aave.png',
+  'Lido': '/icons/lido.png',
+  'Marinade': '/icons/marinade.png',
+  'Jito': '/icons/jito.png',
+};
+
+const TOKEN_ICONS: Record<string, string> = {
+  'ETH': '/icons/eth.png',
+  'WETH': '/icons/eth.png',
+  'WBTC': '/icons/btc.png',
+  'USDC': '/icons/dedlyfi.png',
+  'SOL': '/icons/solana.png',
+};
+
+async function fetchUserTransactions(address: string): Promise<Transaction[]> {
+  const response = await fetch(`${API_URL}/api/transactions/${address}`);
+  if (!response.ok) throw new Error('Failed to fetch transactions');
+  return response.json();
+}
+
+export default function PositionsPage() {
+  const { address, isConnected } = useAccount();
+  const [selectedPosition, setSelectedPosition] = useState<Transaction | null>(null);
+  const [isUnstakeModalOpen, setIsUnstakeModalOpen] = useState(false);
+  const { data: options } = useStakingOptions(); // To get current APY info
+  
+  const { data: transactions, isLoading, error, refetch } = useQuery({
+    queryKey: ['transactions', address],
+    queryFn: () => fetchUserTransactions(address!),
+    enabled: !!address,
+    refetchInterval: 5000, // Refetch every 5 seconds to catch status updates
+  });
+
+  const { unstake, isLoading: isUnstaking } = useUnstake();
+
+  const handleUnstakeConfirm = async (amount: string) => {
+    if (!selectedPosition) return;
+    
+    try {
+      await unstake(selectedPosition, amount);
+      
+      toast.success('Unstake successful!', {
+        description: `Successfully unstaked ${amount} ${selectedPosition.token} from ${selectedPosition.protocol}`
+      });
+      
+      setIsUnstakeModalOpen(false);
+      refetch();
+    } catch (error: any) {
+      toast.error('Unstake failed', {
+        description: error.message || 'Please try again'
+      });
+    }
+  };
+
+  const formatDate = (dateString: string) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return dateString;
+    
+    return new Intl.DateTimeFormat('en-US', {
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    }).format(date);
+  };
+
+  const getApyForProtocol = (protocol: string, token: string) => {
+    if (!options) return 0;
+    const option = options.find((o) => o.protocol === protocol && o.token === token);
+    return option ? option.apy : 0;
+  };
+
+  if (!isConnected) {
+    return (
+      <>
+        <Header />
+        <main className="container mx-auto px-4 py-8">
+          <div className="flex flex-col items-center justify-center py-20 text-center">
+            <div className="mb-6 rounded-full bg-white/5 p-6 ring-1 ring-white/10">
+              <Wallet className="h-12 w-12 text-[var(--color-text-muted)]" />
+            </div>
+            <h2 className="text-2xl font-bold text-[var(--color-text-main)]">Connect your wallet</h2>
+            <p className="mt-2 text-[var(--color-text-muted)]">
+              Please connect your wallet to view your active positions and staking history.
+            </p>
+          </div>
+        </main>
+      </>
+    );
+  }
+
+  return (
+    <>
+      <Header />
+      <main className="container mx-auto px-4 py-8">
+        <div className="mb-8 flex items-end justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-[var(--color-text-main)]">
+              My Positions
+            </h1>
+            <p className="text-[var(--color-text-muted)] mt-2">
+              Track your active stakes and earnings
+            </p>
+          </div>
+        </div>
+
+        {isLoading && (
+          <div className="flex items-center justify-center py-20">
+            <Loader2 className="h-8 w-8 animate-spin text-[var(--color-primary)]" />
+          </div>
+        )}
+
+        {error && (
+          <Card className="bg-red-500/10 border-red-500/20 p-6 text-center">
+            <p className="text-red-400">Failed to load positions. Please try again later.</p>
+          </Card>
+        )}
+
+        {transactions && transactions.length === 0 && (
+          <Card className="flex flex-col items-center justify-center py-16 text-center">
+            <div className="mb-4 rounded-full bg-white/5 p-4">
+              <TrendingUp className="h-8 w-8 text-[var(--color-text-muted)]" />
+            </div>
+            <h3 className="text-lg font-semibold text-[var(--color-text-main)]">No positions yet</h3>
+            <p className="mt-1 max-w-sm text-sm text-[var(--color-text-muted)]">
+              Start staking your assets to earn rewards and track them here.
+            </p>
+            <Button 
+              variant="primary" 
+              className="mt-6"
+              onClick={() => window.location.href = '/'}
+            >
+              Explore Staking Options
+            </Button>
+          </Card>
+        )}
+
+        {transactions && transactions.length > 0 && (
+          <div className="grid gap-4">
+            {transactions.map((tx) => {
+              const currentApy = getApyForProtocol(tx.protocol, tx.token);
+              
+              return (
+                <Card key={tx._id} hoverEffect className="group relative overflow-hidden transition-all duration-300">
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                    
+                    {/* Left: Icon & Main Info */}
+                    <div className="flex items-center gap-4">
+                      <div className="relative h-12 w-12 flex-shrink-0">
+                        <div className="h-12 w-12 overflow-hidden rounded-full bg-white/5 p-1 ring-1 ring-white/10">
+                          <Image 
+                            src={PROTOCOL_ICONS[tx.protocol] || '/icons/dedlyfi.png'} 
+                            alt={tx.protocol}
+                            width={48}
+                            height={48}
+                            className="object-contain"
+                          />
+                        </div>
+                        <div className="absolute -bottom-1 -right-1 h-6 w-6 rounded-full bg-gray-900 p-0.5 ring-1 ring-black">
+                          <Image 
+                            src={TOKEN_ICONS[tx.token] || '/icons/dedlyfi.png'} 
+                            alt={tx.token}
+                            width={24}
+                            height={24}
+                            className="object-contain"
+                          />
+                        </div>
+                      </div>
+                      
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h3 className="text-lg font-bold text-[var(--color-text-main)]">
+                            {tx.amount} {tx.token}
+                          </h3>
+                          <Badge variant={
+                            tx.status === 'confirmed' ? 'success' : 
+                            tx.status === 'pending' ? 'warning' : 
+                            'error'
+                          } className="capitalize">
+                            {tx.status}
+                          </Badge>
+                        </div>
+                        <p className="text-sm font-medium text-[var(--color-text-muted)]">
+                          {tx.protocol}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Middle: Stats */}
+                    <div className="flex items-center gap-8 border-t border-white/5 pt-4 sm:border-0 sm:pt-0">
+                      <div className="flex flex-col">
+                        <span className="text-xs text-[var(--color-text-muted)]">Current APY</span>
+                        <span className="font-mono text-lg font-bold text-emerald-400">
+                          {currentApy > 0 ? (
+                            <CountUp 
+                              end={currentApy} 
+                              decimals={2} 
+                              suffix="%" 
+                              duration={2.5}
+                              separator=","
+                            />
+                          ) : '-'}
+                        </span>
+                      </div>
+                      
+                      <div className="flex flex-col">
+                        {/* Label removed as requested */}
+                        <div className="flex items-center gap-1.5 text-sm text-[var(--color-text-muted)]">
+                          <Clock className="h-3.5 w-3.5 text-[var(--color-text-dim)]" />
+                          {tx.createdAt ? formatDate(tx.createdAt) : 'Just now'}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Right: Actions */}
+                    <div className="flex items-center justify-end gap-3">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setSelectedPosition({ ...tx, apy: currentApy });
+                          setIsUnstakeModalOpen(true);
+                        }}
+                        className="group relative overflow-hidden border-blue-500/30 bg-gradient-to-r from-blue-500/10 to-purple-500/10 hover:from-blue-500/20 hover:to-purple-500/20 hover:border-blue-400/50 transition-all duration-300"
+                      >
+                        <div className="absolute inset-0 bg-gradient-to-r from-blue-500/0 via-blue-500/10 to-blue-500/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
+                        <div className="relative flex items-center gap-2">
+                          <ArrowDownCircle className="h-3.5 w-3.5 group-hover:rotate-180 transition-transform duration-500" />
+                          <span className="font-medium">Manage</span>
+                        </div>
+                      </Button>
+                      <a
+                        href={`https://sepolia.etherscan.io/tx/${tx.txHash}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-2 rounded-lg bg-white/5 px-4 py-2 text-sm font-medium text-[var(--color-text-muted)] transition-colors hover:bg-white/10 hover:text-[var(--color-text-main)]"
+                      >
+                        <span>View on Explorer</span>
+                        <ExternalLink className="h-4 w-4" />
+                      </a>
+                    </div>
+                  </div>
+                </Card>
+              );
+            })}
+          </div>
+        )}
+      </main>
+
+      <UnstakingModal
+        position={selectedPosition}
+        isOpen={isUnstakeModalOpen}
+        onClose={() => setIsUnstakeModalOpen(false)}
+        onConfirm={handleUnstakeConfirm}
+        isLoading={isUnstaking}
+      />
+    </>
+  );
+}
