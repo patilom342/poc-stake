@@ -54,8 +54,8 @@ export function UnstakingModal({ position, isOpen, onClose, onConfirm, isLoading
     }
 
     const stakedAmount = parseFloat(position.amount);
-    // Ensure we handle both Date objects and string dates
-    const stakedDate = new Date(position.createdAt || position.date || Date.now());
+    // Ensure we handle both Date objects and string dates, prioritizing timestamp from backend
+    const stakedDate = new Date(position.timestamp || position.createdAt || position.date || Date.now());
     const now = new Date();
     
     // Calculate time difference in milliseconds

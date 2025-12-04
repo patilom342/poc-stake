@@ -26,7 +26,7 @@ interface Transaction {
   amount: string;
   txHash: string;
   status: 'pending' | 'confirmed' | 'failed';
-  createdAt: string;
+  timestamp: string;
   apy?: number;
 }
 
@@ -242,7 +242,7 @@ export default function PositionsPage() {
                         {/* Label removed as requested */}
                         <div className="flex items-center gap-1.5 text-sm text-[var(--color-text-muted)]">
                           <Clock className="h-3.5 w-3.5 text-[var(--color-text-dim)]" />
-                          {tx.createdAt ? formatDate(tx.createdAt) : 'Just now'}
+                          {tx.timestamp ? formatDate(tx.timestamp) : 'Just now'}
                         </div>
                       </div>
                     </div>
