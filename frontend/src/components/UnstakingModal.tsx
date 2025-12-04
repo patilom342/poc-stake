@@ -89,21 +89,12 @@ export function UnstakingModal({ position, isOpen, onClose, onConfirm, isLoading
     // Use position APY if available, otherwise fallback to default
     const currentAPY = position.apy || 5.2; 
     
-    // Use on-chain balance if available, otherwise fallback to theoretical calculation
-    let currentValue = stakedAmount;
-    let totalEarnings = 0;
-
-    if (onChainBalance) {
-      // Get correct decimals for token
-      const decimals = TOKEN_DECIMALS[position.token] || 18;
-      const formattedBalance = parseFloat(formatUnits(onChainBalance, decimals));
-      currentValue = formattedBalance;
-      totalEarnings = currentValue - stakedAmount;
-    } else {
-      // Fallback to theoretical calculation
-      totalEarnings = stakedAmount * (currentAPY / 100) * yearsElapsed;
-      currentValue = stakedAmount + totalEarnings;
-    }
+    // Calculate theoretical earnings based on APY and time
+    // Note: In a production system, we would track individual receipt token amounts
+    // For now, we use theoretical calculation to avoid showing inflated values
+    // from accumulated receipt tokens across multiple stakes
+    const totalEarnings = stakedAmount * (currentAPY / 100) * yearsElapsed;
+    const currentValue = stakedAmount + totalEarnings;
     
     const dailyEarnings = (stakedAmount * (currentAPY / 100)) / 365;
     const percentageGain = stakedAmount > 0 ? (totalEarnings / stakedAmount) * 100 : 0;
