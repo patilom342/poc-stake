@@ -2,7 +2,11 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 
-dotenv.config();
+// Only load .env file in development (Railway injects env vars directly)
+if (process.env.NODE_ENV !== 'production') {
+  dotenv.config();
+}
+
 
 import mongoose from 'mongoose';
 import swaggerUi from 'swagger-ui-express';
