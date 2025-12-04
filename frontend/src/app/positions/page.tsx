@@ -23,6 +23,8 @@ interface Transaction {
   userAddress: string;
   protocol: string;
   token: string;
+  tokenAddress: string;
+  adapterAddress: string;
   amount: string;
   txHash: string;
   status: 'pending' | 'confirmed' | 'failed';

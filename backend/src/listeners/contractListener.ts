@@ -82,8 +82,10 @@ export function startContractListener() {
       await transactionQueue.add('process-stake', {
         txHash,
         userAddress: user,
-        protocol: 'Unknown',
+        protocol: 'Unknown', // Will be determined by adapter address in worker
         token: tokenSymbol,
+        tokenAddress: token, // Contract address from event
+        adapterAddress: adapter, // Adapter address from event
         amount: formattedAmount,
         fee: formattedFee,
         blockNumber: Number(log.blockNumber),

@@ -2,7 +2,8 @@ import mongoose, { Schema, Document } from 'mongoose';
 
 export interface IStakingTransaction extends Document {
   userAddress: string;
-  token: string;
+  token: string; // Symbol (e.g., "WETH")
+  tokenAddress: string; // Contract address (e.g., "0x...")
   amount: string;
   protocol: string;
   adapterAddress: string;
@@ -18,6 +19,7 @@ export interface IStakingTransaction extends Document {
 const StakingTransactionSchema: Schema = new Schema({
   userAddress: { type: String, required: true, index: true },
   token: { type: String, required: true },
+  tokenAddress: { type: String, required: true },
   amount: { type: String, required: true },
   protocol: { type: String, required: true },
   adapterAddress: { type: String, required: true },

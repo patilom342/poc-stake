@@ -12,6 +12,8 @@ interface StakeEventData {
   userAddress: string;
   protocol: string;
   token: string;
+  tokenAddress: string;
+  adapterAddress: string;
   amount: string;
   blockNumber: number;
   fee?: string;
@@ -26,16 +28,29 @@ interface UnstakeEventData {
   blockNumber: number;
 }
 
+// Map adapter addresses to protocol names
+const ADAPTER_TO_PROTOCOL: Record<string, string> = {
+  [process.env.SEPOLIA_UNISWAP_ADAPTER?.toLowerCase() || '']: 'Uniswap V3',
+  [process.env.SEPOLIA_AAVE_ADAPTER?.toLowerCase() || '']: 'Aave V3',
+  [process.env.SEPOLIA_LIDO_ADAPTER?.toLowerCase() || '']: 'Lido',
+};
+
 export const transactionWorker = new Worker<StakeEventData | UnstakeEventData>(
   'transaction-processing',
   async (job: Job<StakeEventData | UnstakeEventData>) => {
-    const { txHash, userAddress, protocol, token, amount, blockNumber } = job.data;
+    const { txHash, userAddress, token, amount, blockNumber } = job.data;
     const jobName = job.name;
     
     logger.info(`Processing ${jobName} event for tx: ${txHash}`, { service: 'TransactionWorker' });
 
     try {
       if (jobName === 'process-stake') {
+        const stakeData = job.data as StakeEventData;
+        const { tokenAddress, adapterAddress, fee } = stakeData;
+        
+        // Determine protocol from adapter address
+        const protocol = ADAPTER_TO_PROTOCOL[adapterAddress.toLowerCase()] || 'Unknown';
+        
         // Handle stake event
         let transaction = await StakingTransaction.findOne({ txHash });
 
@@ -52,11 +67,14 @@ export const transactionWorker = new Worker<StakeEventData | UnstakeEventData>(
             userAddress: userAddress.toLowerCase(),
             protocol,
             token,
+            tokenAddress,
+            adapterAddress,
             amount,
             txHash,
             status: 'confirmed',
-            network: 'sepolia',
-            createdAt: new Date(),
+            fee: fee || '0',
+            network: process.env.ACTIVE_NETWORK || 'sepolia',
+            timestamp: new Date(),
           });
           
           await transaction.save();
@@ -68,9 +86,8 @@ export const transactionWorker = new Worker<StakeEventData | UnstakeEventData>(
         const transaction = await StakingTransaction.findOne({ 
           userAddress: userAddress.toLowerCase(),
           token,
-          protocol,
           status: 'confirmed'
-        }).sort({ createdAt: -1 }); // Get most recent stake
+        }).sort({ timestamp: -1 }); // Get most recent stake
 
         if (transaction) {
           transaction.status = 'unstaked';

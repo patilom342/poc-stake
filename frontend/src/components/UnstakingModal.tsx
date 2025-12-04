@@ -34,6 +34,15 @@ const TOKEN_ICONS: Record<string, string> = {
   'SOL': '/icons/solana.png',
 };
 
+// Token decimals mapping
+const TOKEN_DECIMALS: Record<string, number> = {
+  'ETH': 18,
+  'WETH': 18,
+  'WBTC': 8,
+  'USDC': 6,
+  'SOL': 9,
+};
+
 export function UnstakingModal({ position, isOpen, onClose, onConfirm, isLoading }: UnstakingModalProps) {
   const [amount, setAmount] = useState('');
   const [acceptedTerms, setAcceptedTerms] = useState(false);
@@ -44,7 +53,7 @@ export function UnstakingModal({ position, isOpen, onClose, onConfirm, isLoading
   // Fetch real on-chain balance
   const { balance: onChainBalance, isLoading: isLoadingBalance } = useProtocolBalance(
     position?.adapterAddress,
-    position?.tokenAddress || (position?.token === 'ETH' ? '0x0000000000000000000000000000000000000000' : ''), // Need token address
+    position?.tokenAddress,
     address,
     stakingRouterAddress
   );
@@ -85,8 +94,9 @@ export function UnstakingModal({ position, isOpen, onClose, onConfirm, isLoading
     let totalEarnings = 0;
 
     if (onChainBalance) {
-      // Assuming 18 decimals for now, should use token decimals
-      const formattedBalance = parseFloat(formatUnits(onChainBalance, 18));
+      // Get correct decimals for token
+      const decimals = TOKEN_DECIMALS[position.token] || 18;
+      const formattedBalance = parseFloat(formatUnits(onChainBalance, decimals));
       currentValue = formattedBalance;
       totalEarnings = currentValue - stakedAmount;
     } else {
