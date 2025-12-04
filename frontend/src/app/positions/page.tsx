@@ -11,9 +11,10 @@ import { UnstakingModal } from '@/components/UnstakingModal';
 import { toast } from 'sonner';
 import { useAccount } from 'wagmi';
 import { useQuery } from '@tanstack/react-query';
-import { Loader2, TrendingUp, Clock, ExternalLink, Wallet, ArrowDownCircle } from 'lucide-react';
+import { Loader2, TrendingUp, Clock, ExternalLink, Wallet, ArrowDownCircle, DollarSign } from 'lucide-react';
 import { useStakingOptions } from '@/hooks/useStakingOptions';
 import { useUnstake } from '@/hooks/useUnstake';
+import { usePrices } from '@/hooks/usePrices';
 import CountUp from 'react-countup';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
@@ -66,6 +67,20 @@ export default function PositionsPage() {
     enabled: !!address,
     refetchInterval: 5000, // Refetch every 5 seconds to catch status updates
   });
+
+  // Get unique tokens from transactions for price fetching
+  const uniqueTokens = transactions 
+    ? Array.from(new Set(transactions.map(tx => tx.token)))
+    : [];
+  
+  const { prices, isLoading: isPricesLoading } = usePrices(uniqueTokens);
+
+  // Calculate portfolio total in USD
+  const portfolioTotal = transactions?.reduce((total, tx) => {
+    const amount = parseFloat(tx.amount);
+    const price = prices[tx.token] || 0;
+    return total + (amount * price);
+  }, 0) || 0;
 
   const { unstake, isLoading: isUnstaking } = useUnstake();
 
@@ -140,6 +155,42 @@ export default function PositionsPage() {
             </p>
           </div>
         </div>
+
+        {/* Portfolio Total Card */}
+        {transactions && transactions.length > 0 && (
+          <Card className="mb-6 bg-gradient-to-br from-[var(--color-primary)]/10 to-purple-500/10 border-[var(--color-primary)]/20">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="flex items-center gap-2 text-sm text-[var(--color-text-muted)] mb-1">
+                  <DollarSign className="h-4 w-4" />
+                  <span>Total Portfolio Value</span>
+                </div>
+                <div className="text-3xl font-bold text-[var(--color-text-main)]">
+                  {isPricesLoading ? (
+                    <span className="text-[var(--color-text-muted)]">Loading...</span>
+                  ) : (
+                    <>
+                      $<CountUp 
+                        end={portfolioTotal} 
+                        decimals={2} 
+                        duration={1}
+                        separator=","
+                      />
+                    </>
+                  )}
+                </div>
+                <p className="text-xs text-[var(--color-text-dim)] mt-1">
+                  Across {transactions.length} position{transactions.length !== 1 ? 's' : ''}
+                </p>
+              </div>
+              <div className="hidden sm:flex items-center gap-2 text-sm text-[var(--color-text-muted)]">
+                <div className="h-12 w-12 rounded-full bg-[var(--color-primary)]/20 flex items-center justify-center">
+                  <TrendingUp className="h-6 w-6 text-[var(--color-primary)]" />
+                </div>
+              </div>
+            </div>
+          </Card>
+        )}
 
         {isLoading && (
           <div className="flex items-center justify-center py-20">
