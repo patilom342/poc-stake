@@ -51,12 +51,12 @@ const STAKING_ROUTER_ABI = [
 
 // Token addresses from env
 const TOKEN_ADDRESSES: Record<string, Address> = {
-  WETH: (process.env.NEXT_PUBLIC_SEPOLIA_WETH as Address) || '0x0fe44892c3279c09654f3590cf6CedAc3FC3ccdc',
-  WBTC: (process.env.NEXT_PUBLIC_SEPOLIA_WBTC as Address) || '0x8762c93f84dcB6f9782602D842a587409b7Cf6cd',
-  SOL: (process.env.NEXT_PUBLIC_SEPOLIA_USDC as Address) || '0xd28824F4515fA0FeDD052eA70369EA6175a4e18b', // MockSOL (using USDC address)
+  WETH: (process.env.NEXT_PUBLIC_SEPOLIA_WETH as Address) || '0xc94d2F24B552409Cdf00Df0E9a085225b4bbA425',
+  WBTC: (process.env.NEXT_PUBLIC_SEPOLIA_WBTC as Address) || '0xbAd8c8C58f2c7CEFDD7760DC996CbC71640A32e6',
+  SOL: (process.env.NEXT_PUBLIC_SEPOLIA_USDC as Address) || '0xaDD1Fbe72192A8328AeD0EA6E1f729fde11Fd8Ad', // MockSOL (using USDC address)
 };
 
-const STAKING_ROUTER_ADDRESS = (process.env.NEXT_PUBLIC_SEPOLIA_STAKING_ROUTER as Address) || '0xd965b8FA53a1b33B19079b9e998F4A928354B826';
+const STAKING_ROUTER_ADDRESS = (process.env.NEXT_PUBLIC_SEPOLIA_STAKING_ROUTER as Address) || '0xe7489b54feF646bf318F043AB7E8A6a1cb456116';
 
 const TOKEN_DECIMALS: Record<string, number> = {
   WETH: 18,
