@@ -28,28 +28,28 @@ export const updateOptionsQueue = new Queue('update-staking-options', {
  * Worker para procesar job de actualización de opciones
  */
 export const updateOptionsWorker = new Worker('update-staking-options', async (job: Job) => {
-  logger.info(`Processing update options job: ${job.id}`, { 
+  logger.info(`Processing update options job: ${job.id}`, {
     service: 'Queue', method: 'updateOptionsWorker'
   });
 
   try {
     const network = process.env.ACTIVE_NETWORK || 'sepolia';
-    
+
     // Obtener datos de todos los DEX
     const allData = await fetchAllTokensData();
-    
+
     let totalUpdated = 0;
     let totalCreated = 0;
 
     // Obtener direcciones de adapters del deployment
     // Intentar cargar deployment de la red activa, fallback a localhost si no existe
     let deploymentPath = path.join(__dirname, '../../../contracts/deployments', `${network}.json`);
-    
+
     if (!fs.existsSync(deploymentPath)) {
       logger.warn(`Deployment file for ${network} not found, trying localhost fallback`, { service: 'Queue', method: 'updateOptionsWorker' });
       deploymentPath = path.join(__dirname, '../../../contracts/deployments', 'localhost.json');
     }
-    
+
     let adapters: any = {};
     if (fs.existsSync(deploymentPath)) {
       const deployment = JSON.parse(fs.readFileSync(deploymentPath, 'utf-8'));
@@ -61,18 +61,18 @@ export const updateOptionsWorker = new Worker('update-staking-options', async (j
 
     // Mapeo de protocolos a adapters
     const adapterMapping: Record<string, string> = {
-      'Uniswap V3': adapters.Uniswap || '0x0000000000000000000000000000000000000000',
-      'Aave V3': adapters.Aave || '0x0000000000000000000000000000000000000000',
-      'Lido': adapters.Lido || '0x0000000000000000000000000000000000000000',
-      'Marinade': '0x0000000000000000000000000000000000000000', // Mock address for SOL
-      'Jito': '0x0000000000000000000000000000000000000000'     // Mock address for SOL
+      'Uniswap V3': process.env.SEPOLIA_UNISWAP_ADAPTER || adapters.Uniswap,
+      'Aave V3': process.env.SEPOLIA_AAVE_ADAPTER || adapters.Aave,
+      'Lido': process.env.SEPOLIA_LIDO_ADAPTER || adapters.Lido
     };
+    logger.info(`Adapter mapping: ${JSON.stringify(adapterMapping)}`, { service: 'Queue', method: 'updateOptionsWorker' });
 
     // Actualizar o crear opciones para cada token
     for (const [token, dexData] of Object.entries(allData)) {
       for (const data of dexData) {
         const optionId = `${data.protocol.toLowerCase().replace(/\s+/g, '-')}-${token.toLowerCase()}-${network}`;
-        
+        logger.info(`Processing option: ${JSON.stringify(data)}`, { service: 'Queue', method: 'updateOptionsWorker' });
+        logger.info(`Adapter for ${data.protocol}: ${JSON.stringify(adapterMapping[data.protocol])}`, { service: 'Queue', method: 'updateOptionsWorker' });
         const optionData = {
           id: optionId,
           protocol: data.protocol,
@@ -80,23 +80,23 @@ export const updateOptionsWorker = new Worker('update-staking-options', async (j
           apy: data.apy,
           tvl: data.tvl,
           risk: data.risk,
-          adapterAddress: adapterMapping[data.protocol] || '0x0000000000000000000000000000000000000000',
+          adapterAddress: adapterMapping[data.protocol]!,
           isActive: true,
           network: network
         };
 
         const existing = await ProtocolOption.findOne({ id: optionId });
-        
+
         if (existing) {
           // Actualizar solo APY y TVL (datos dinámicos)
           await ProtocolOption.updateOne(
             { id: optionId },
-            { 
-              $set: { 
-                apy: data.apy, 
+            {
+              $set: {
+                apy: data.apy,
                 tvl: data.tvl,
                 updatedAt: new Date()
-              } 
+              }
             }
           );
           totalUpdated++;
@@ -112,9 +112,9 @@ export const updateOptionsWorker = new Worker('update-staking-options', async (j
       service: 'Queue', method: 'updateOptionsWorker'
     });
 
-    return { 
-      success: true, 
-      updated: totalUpdated, 
+    return {
+      success: true,
+      updated: totalUpdated,
       created: totalCreated,
       timestamp: new Date().toISOString()
     };
@@ -154,14 +154,14 @@ updateOptionsWorker.on('error', (error) => {
 export async function scheduleUpdateOptions() {
   // En BullMQ, los jobs repetibles se manejan mejor eliminando los anteriores con el mismo ID
   // o usando una configuración de repetición limpia.
-  
+
   // Agregar job recurrente
   await updateOptionsQueue.add(
     'update-options-recurring',
     {},
     {
       repeat: {
-        every: 5 * 60 * 1000, // 5 minutos
+        every: 1 * 60 * 1000, // 1 minutos
       },
     }
   );
@@ -169,7 +169,7 @@ export async function scheduleUpdateOptions() {
   // Ejecutar inmediatamente al iniciar (job único)
   await updateOptionsQueue.add('update-options-initial', {});
 
-  logger.success('Scheduled update options job (every 5 minutes)', {
+  logger.success('Scheduled update options job (every 1 minutes)', {
     service: 'Queue', method: 'scheduleUpdateOptions'
   });
 }
