@@ -42,6 +42,23 @@ This release focuses on **production-ready improvements** with emphasis on user 
   - Backdrop click disabled during loading
   - Prevents accidental interruption
 
+### 🏭 Production-Ready Staking Options Job
+- **Centralized Adapter Configuration** (`/config/adapters.ts`)
+  - All adapter addresses defined via environment variables
+  - Validates addresses before creating staking options
+  - No more `0x0` adapter addresses in database
+- **Dynamic Risk Calculation**
+  - Risk level calculated based on protocol type AND TVL
+  - Higher TVL = Lower risk (more battle-tested)
+  - Protocols: Lido/Aave = Low base, Uniswap = Medium base
+- **Auto-Deactivation of Stale Options**
+  - Options for removed adapters are automatically deactivated
+  - Keeps database clean without manual intervention
+- **No More `seed.ts` Required**
+  - Job fetches real data from DeFiLlama API
+  - Creates/updates options automatically every 5 minutes
+  - Production deployment only needs environment variables
+
 ### 🔧 Technical Improvements
 
 #### Transaction Reliability
