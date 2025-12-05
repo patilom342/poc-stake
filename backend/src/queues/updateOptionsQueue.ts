@@ -1,16 +1,15 @@
 import { Queue, Worker, Job } from 'bullmq';
 import { Redis } from 'ioredis';
-import { fetchAllTokensData } from '../services/dexService';
+import { fetchAllTokensData, DEXData } from '../services/dexService';
+import { getConfiguredAdapters } from '../config/adapters';
 import ProtocolOption from '../models/ProtocolOption';
 import logger from '../utils/logger';
-import fs from 'fs';
-import path from 'path';
 
 const connection = new Redis(process.env.REDIS_URL || 'redis://localhost:6379', {
   maxRetriesPerRequest: null,
 });
 
-// Crear cola para actualizar opciones de staking
+// Create queue for updating staking options
 export const updateOptionsQueue = new Queue('update-staking-options', {
   connection,
   defaultJobOptions: {
@@ -25,7 +24,13 @@ export const updateOptionsQueue = new Queue('update-staking-options', {
 });
 
 /**
- * Worker para procesar job de actualización de opciones
+ * Worker to process staking options update job
+ * 
+ * This worker:
+ * 1. Fetches real-time data from DeFiLlama
+ * 2. Only creates/updates options for protocols with configured adapters
+ * 3. Calculates dynamic risk based on TVL
+ * 4. Deactivates options for protocols no longer supported
  */
 export const updateOptionsWorker = new Worker('update-staking-options', async (job: Job) => {
   logger.info(`Processing update options job: ${job.id}`, {
@@ -34,45 +39,41 @@ export const updateOptionsWorker = new Worker('update-staking-options', async (j
 
   try {
     const network = process.env.ACTIVE_NETWORK || 'sepolia';
+    
+    // Check configured adapters
+    const configuredAdapters = getConfiguredAdapters();
+    if (configuredAdapters.length === 0) {
+      logger.warn('No adapters configured! Skipping update. Set ADAPTER_UNISWAP, ADAPTER_AAVE, ADAPTER_LIDO environment variables.', {
+        service: 'Queue', method: 'updateOptionsWorker'
+      });
+      return {
+        success: false,
+        reason: 'No adapters configured',
+        timestamp: new Date().toISOString()
+      };
+    }
 
-    // Obtener datos de todos los DEX
+    // Fetch real data from DeFiLlama (already filtered by configured adapters)
     const allData = await fetchAllTokensData();
 
     let totalUpdated = 0;
     let totalCreated = 0;
+    const processedIds: string[] = [];
 
-    // Obtener direcciones de adapters del deployment
-    // Intentar cargar deployment de la red activa, fallback a localhost si no existe
-    let deploymentPath = path.join(__dirname, '../../../contracts/deployments', `${network}.json`);
+    // Process each token's data
+    for (const [token, dexDataArray] of Object.entries(allData)) {
+      for (const data of dexDataArray) {
+        // Validate adapter address exists
+        if (!data.adapterAddress || data.adapterAddress === '0x0000000000000000000000000000000000000000') {
+          logger.warn(`Skipping ${data.protocol} ${token}: Invalid adapter address`, {
+            service: 'Queue', method: 'updateOptionsWorker'
+          });
+          continue;
+        }
 
-    if (!fs.existsSync(deploymentPath)) {
-      logger.warn(`Deployment file for ${network} not found, trying localhost fallback`, { service: 'Queue', method: 'updateOptionsWorker' });
-      deploymentPath = path.join(__dirname, '../../../contracts/deployments', 'localhost.json');
-    }
-
-    let adapters: any = {};
-    if (fs.existsSync(deploymentPath)) {
-      const deployment = JSON.parse(fs.readFileSync(deploymentPath, 'utf-8'));
-      adapters = deployment.contracts.Adapters;
-      logger.info(`Loaded adapters from ${deploymentPath}`, { service: 'Queue', method: 'updateOptionsWorker' });
-    } else {
-      logger.error('No deployment file found (checked network and localhost)', { service: 'Queue', method: 'updateOptionsWorker' });
-    }
-
-    // Mapeo de protocolos a adapters
-    const adapterMapping: Record<string, string> = {
-      'Uniswap V3': process.env.SEPOLIA_UNISWAP_ADAPTER || adapters.Uniswap,
-      'Aave V3': process.env.SEPOLIA_AAVE_ADAPTER || adapters.Aave,
-      'Lido': process.env.SEPOLIA_LIDO_ADAPTER || adapters.Lido
-    };
-    logger.info(`Adapter mapping: ${JSON.stringify(adapterMapping)}`, { service: 'Queue', method: 'updateOptionsWorker' });
-
-    // Actualizar o crear opciones para cada token
-    for (const [token, dexData] of Object.entries(allData)) {
-      for (const data of dexData) {
         const optionId = `${data.protocol.toLowerCase().replace(/\s+/g, '-')}-${token.toLowerCase()}-${network}`;
-        logger.info(`Processing option: ${JSON.stringify(data)}`, { service: 'Queue', method: 'updateOptionsWorker' });
-        logger.info(`Adapter for ${data.protocol}: ${JSON.stringify(adapterMapping[data.protocol])}`, { service: 'Queue', method: 'updateOptionsWorker' });
+        processedIds.push(optionId);
+
         const optionData = {
           id: optionId,
           protocol: data.protocol,
@@ -80,7 +81,7 @@ export const updateOptionsWorker = new Worker('update-staking-options', async (j
           apy: data.apy,
           tvl: data.tvl,
           risk: data.risk,
-          adapterAddress: adapterMapping[data.protocol]!,
+          adapterAddress: data.adapterAddress,
           isActive: true,
           network: network
         };
@@ -88,27 +89,52 @@ export const updateOptionsWorker = new Worker('update-staking-options', async (j
         const existing = await ProtocolOption.findOne({ id: optionId });
 
         if (existing) {
-          // Actualizar solo APY y TVL (datos dinámicos)
+          // Update dynamic data (APY, TVL, Risk can change)
           await ProtocolOption.updateOne(
             { id: optionId },
             {
               $set: {
                 apy: data.apy,
                 tvl: data.tvl,
+                risk: data.risk,
+                adapterAddress: data.adapterAddress, // Update in case it changed
+                isActive: true,
                 updatedAt: new Date()
               }
             }
           );
           totalUpdated++;
         } else {
-          // Crear nueva opción
+          // Create new option
           await ProtocolOption.create(optionData);
           totalCreated++;
+          logger.info(`Created new option: ${optionId}`, {
+            service: 'Queue', method: 'updateOptionsWorker'
+          });
         }
       }
     }
 
-    logger.success(`Updated ${totalUpdated} and created ${totalCreated} staking options - Job: ${job.id}`, {
+    // Deactivate options that are no longer supported
+    // (e.g., adapter was removed from configuration)
+    const deactivateResult = await ProtocolOption.updateMany(
+      { 
+        network: network,
+        id: { $nin: processedIds },
+        isActive: true
+      },
+      { 
+        $set: { isActive: false, updatedAt: new Date() } 
+      }
+    );
+
+    if (deactivateResult.modifiedCount > 0) {
+      logger.info(`Deactivated ${deactivateResult.modifiedCount} stale options`, {
+        service: 'Queue', method: 'updateOptionsWorker'
+      });
+    }
+
+    logger.success(`Job ${job.id} completed - Updated: ${totalUpdated}, Created: ${totalCreated}`, {
       service: 'Queue', method: 'updateOptionsWorker'
     });
 
@@ -116,6 +142,7 @@ export const updateOptionsWorker = new Worker('update-staking-options', async (j
       success: true,
       updated: totalUpdated,
       created: totalCreated,
+      deactivated: deactivateResult.modifiedCount,
       timestamp: new Date().toISOString()
     };
 
@@ -128,10 +155,10 @@ export const updateOptionsWorker = new Worker('update-staking-options', async (j
 }, { connection });
 
 /**
- * Eventos del worker
+ * Worker events
  */
 updateOptionsWorker.on('completed', (job, result) => {
-  logger.success(`Job ${job.id} completed - Updated: ${result.updated}, Created: ${result.created}`, {
+  logger.success(`Job ${job.id} completed - Result: ${JSON.stringify(result)}`, {
     service: 'Queue', method: 'updateOptionsWorker'
   });
 });
@@ -149,27 +176,30 @@ updateOptionsWorker.on('error', (error) => {
 });
 
 /**
- * Programar job recurrente (cada 5 minutos)
+ * Schedule recurring job (every 5 minutes)
  */
 export async function scheduleUpdateOptions() {
-  // En BullMQ, los jobs repetibles se manejan mejor eliminando los anteriores con el mismo ID
-  // o usando una configuración de repetición limpia.
+  // Clear any existing repeatable jobs to avoid duplicates
+  const existingJobs = await updateOptionsQueue.getRepeatableJobs();
+  for (const job of existingJobs) {
+    await updateOptionsQueue.removeRepeatableByKey(job.key);
+  }
 
-  // Agregar job recurrente
+  // Add recurring job (every 5 minutes)
   await updateOptionsQueue.add(
     'update-options-recurring',
     {},
     {
       repeat: {
-        every: 1 * 60 * 1000, // 1 minutos
+        every: 5 * 60 * 1000, // 5 minutes
       },
     }
   );
 
-  // Ejecutar inmediatamente al iniciar (job único)
+  // Execute immediately on startup
   await updateOptionsQueue.add('update-options-initial', {});
 
-  logger.success('Scheduled update options job (every 1 minutes)', {
+  logger.success('Scheduled update options job (every 5 minutes)', {
     service: 'Queue', method: 'scheduleUpdateOptions'
   });
 }
